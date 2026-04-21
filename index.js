@@ -1,5 +1,8 @@
 require('dotenv').config();
 
+// =======================
+// 📦 IMPORTS
+// =======================
 const {
   Client,
   GatewayIntentBits,
@@ -9,9 +12,25 @@ const {
 
 const fs = require('fs');
 const Parser = require('rss-parser');
-const parser = new Parser();
+const express = require('express');
 
-// 🔥 CLIENT SETUP
+// =======================
+// 🌐 EXPRESS SERVER (IMPORTANT FOR UPTIME ROBOT)
+// =======================
+const app = express();
+
+app.get('/', (req, res) => {
+  res.send('ZENCRAFT BOT IS ALIVE ✔');
+});
+
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log(`🌐 Web server running on port ${PORT}`);
+});
+
+// =======================
+// 🔥 DISCORD CLIENT SETUP
+// =======================
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
@@ -21,10 +40,17 @@ const client = new Client({
   ]
 });
 
+// =======================
 // 💾 STORAGE
+// =======================
 client.commands = new Collection();
 client.giveaways = new Map();
 client.polls = new Map();
+
+// =======================
+// 📦 RSS PARSER
+// =======================
+const parser = new Parser();
 
 // =======================
 // ✅ LOAD COMMANDS
@@ -85,7 +111,7 @@ setInterval(async () => {
 
     const latest = feed.items[0];
 
-    // 🚫 Prevent spam on restart
+    // prevent duplicate on restart
     if (!lastVideo) {
       lastVideo = latest.id;
       return;
@@ -97,7 +123,7 @@ setInterval(async () => {
       const channel = await client.channels.fetch(process.env.YT_CHANNEL).catch(() => null);
 
       if (!channel) {
-        console.log("❌ YT channel not found");
+        console.log("❌ YouTube channel not found");
         return;
       }
 
@@ -122,7 +148,7 @@ setInterval(async () => {
   } catch (err) {
     console.error("❌ YouTube error:", err.message);
   }
-}, 300000); // 5 min
+}, 300000); // 5 minutes
 
 // =======================
 // 🔥 READY EVENT
@@ -136,4 +162,3 @@ client.once('ready', () => {
 // =======================
 client.login(process.env.TOKEN)
   .catch(err => console.error("❌ Login failed:", err.message));
-
