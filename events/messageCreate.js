@@ -5,6 +5,12 @@ const userMessages = new Map();
 // 🎯 YOUR GENERAL CHANNEL ID
 const GENERAL_CHANNEL_ID = "1467154654096789757";
 
+// ⚙️ SETTINGS
+const SPAM_LIMIT = 5;           // messages
+const SPAM_INTERVAL = 5000;     // 5 sec window
+const TIMEOUT_DURATION = 5 * 60 * 1000; // 5 minutes
+const DUPLICATE_LIMIT = 3;      // same msg repeated
+
 module.exports = {
   name: 'messageCreate',
 
@@ -29,30 +35,64 @@ module.exports = {
     }
 
     // =========================
-    // 🔥 ANTI SPAM (ALL CHANNELS)
+    // 🔥 ADVANCED ANTI-SPAM
     // =========================
     const now = Date.now();
-    const data = userMessages.get(message.author.id) || {
-      count: 0,
-      last: now
-    };
 
-    data.count++;
-    data.last = now;
+    let userData = userMessages.get(message.author.id);
 
-    userMessages.set(message.author.id, data);
-
-    if (data.count >= 5) {
-      await message.delete().catch(() => {});
-
-      return message.channel.send({
-        content: `${message.author} 🚫 Stop spamming!`
-      }).then(msg => setTimeout(() => msg.delete().catch(()=>{}), 3000));
+    if (!userData) {
+      userData = {
+        timestamps: [],
+        messages: []
+      };
     }
 
-    setTimeout(() => {
+    // Add current message
+    userData.timestamps.push(now);
+    userData.messages.push(message.content);
+
+    // Keep only last 5 seconds
+    userData.timestamps = userData.timestamps.filter(t => now - t < SPAM_INTERVAL);
+    userData.messages = userData.messages.slice(-5);
+
+    userMessages.set(message.author.id, userData);
+
+    // 🚫 FAST SPAM DETECTION
+    if (userData.timestamps.length >= SPAM_LIMIT) {
+
+      await message.delete().catch(() => {});
+
+      if (message.member && message.member.moderatable) {
+        await message.member.timeout(TIMEOUT_DURATION, "Fast spamming")
+          .catch(() => {});
+      }
+
       userMessages.delete(message.author.id);
-    }, 5000);
+
+      return message.channel.send({
+        content: `${message.author} 🚫 Timed out for 5 minutes (spam detected)`
+      }).then(msg => setTimeout(() => msg.delete().catch(()=>{}), 5000));
+    }
+
+    // 🚫 DUPLICATE SPAM DETECTION
+    const duplicates = userData.messages.filter(m => m === message.content);
+
+    if (duplicates.length >= DUPLICATE_LIMIT && message.content.length > 3) {
+
+      await message.delete().catch(() => {});
+
+      if (message.member && message.member.moderatable) {
+        await message.member.timeout(TIMEOUT_DURATION, "Duplicate spam")
+          .catch(() => {});
+      }
+
+      userMessages.delete(message.author.id);
+
+      return message.channel.send({
+        content: `${message.author} 🚫 Timed out for 5 minutes (duplicate spam)`
+      }).then(msg => setTimeout(() => msg.delete().catch(()=>{}), 5000));
+    }
 
     // =========================
     // 📡 IP AUTO RESPONSE
@@ -62,7 +102,6 @@ module.exports = {
       const embed = new EmbedBuilder()
         .setTitle("📡 Zencraft SMP Server IP")
         .setColor("#57F287")
-
         .setDescription(
           `💻 **Java Edition IP:**\n` +
           `\`\`\`\npaid-1.endernodes.xyz:25573\n\`\`\`\n\n` +
@@ -75,7 +114,6 @@ module.exports = {
 
           `📋 Easy to copy above!`
         )
-
         .setFooter({ text: "🔥 Powered by Zencraft SMP" });
 
       return message.channel.send({
