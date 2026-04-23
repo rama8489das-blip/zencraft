@@ -1,6 +1,9 @@
 const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 const axios = require('axios');
 
+// Store active intervals per guild
+const activeUpdates = new Map();
+
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('mcstatus')
@@ -23,8 +26,20 @@ module.exports = {
     const port = interaction.options.getInteger('port');
 
     const address = port ? `${ip}:${port}` : ip;
+    const guildId = interaction.guild.id;
 
-    await interaction.reply({ content: "⏳ Fetching server status...", ephemeral: true });
+    // ❌ Prevent multiple loops per server
+    if (activeUpdates.has(guildId)) {
+      return interaction.reply({
+        content: "❌ Already running a live status in this server.",
+        ephemeral: true
+      });
+    }
+
+    await interaction.reply({
+      content: "⏳ Fetching server status...",
+      ephemeral: true
+    });
 
     const fetchStatus = async () => {
       try {
@@ -54,10 +69,15 @@ module.exports = {
       const online = data.players?.online ?? 0;
       const max = data.players?.max ?? 0;
 
+      const playerList = data.players?.list?.length
+        ? data.players.list.slice(0, 10).join(", ")
+        : "No players online";
+
       return embed.setDescription(
         `🌐 **IP:** ${address}\n\n` +
         `📜 **MOTD:**\n${motd}\n\n` +
-        `👥 **Players:** ${online} / ${max}\n\n` +
+        `👥 **Players:** ${online} / ${max}\n` +
+        `🧑 **Online List:**\n${playerList}\n\n` +
         `🟢 **Status:** Online`
       );
     };
@@ -66,7 +86,7 @@ module.exports = {
       embeds: [buildEmbed(data)]
     });
 
-    // 🔁 LIVE UPDATE EVERY 10s
+    // 🔁 LIVE UPDATE LOOP (NO AUTO STOP)
     const interval = setInterval(async () => {
       data = await fetchStatus();
 
@@ -75,9 +95,17 @@ module.exports = {
       }).catch(() => {});
     }, 10000);
 
-    // ⏹️ AUTO STOP AFTER 5 MIN (ANTI-LAG)
-    setTimeout(() => {
-      clearInterval(interval);
-    }, 300000);
+    // Save interval
+    activeUpdates.set(guildId, interval);
+
+    // 🧹 Cleanup if message deleted
+    const collector = msg.createMessageComponentCollector();
+
+    msg.channel.client.on('messageDelete', (deletedMsg) => {
+      if (deletedMsg.id === msg.id) {
+        clearInterval(interval);
+        activeUpdates.delete(guildId);
+      }
+    });
   }
 };
