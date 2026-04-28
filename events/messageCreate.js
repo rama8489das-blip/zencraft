@@ -100,17 +100,17 @@ module.exports = {
     if (message.content.toLowerCase() === "ip") {
 
       const embed = new EmbedBuilder()
-        .setTitle("📡 Zencraft SMP Server IP")
+        .setTitle("📡 Zencraft Primecraft Lifesteal Server IP")
         .setColor("#57F287")
         .setDescription(
           `💻 **Java Edition IP:**\n` +
-          `\`\`\`\npaid-1.endernodes.xyz:25573\n\`\`\`\n\n` +
+          `\`\`\`\nComming Soon..\n\`\`\`\n\n` +
 
           `📱 **Bedrock Edition IP:**\n` +
-          `\`\`\`\npaid-1.endernodes.xyz\n\`\`\`\n\n` +
+          `\`\`\`\nComming Soon..\n\`\`\`\n\n` +
 
           `🔌 **Bedrock Port:**\n` +
-          `\`\`\`\n19132\n\`\`\`\n\n` +
+          `\`\`\`\nComming Soon..\n\`\`\`\n\n` +
 
           `📋 Easy to copy above!`
         )
