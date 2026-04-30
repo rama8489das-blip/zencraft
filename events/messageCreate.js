@@ -104,13 +104,13 @@ module.exports = {
         .setColor("#57F287")
         .setDescription(
           `💻 **Java Edition IP:**\n` +
-          `\`\`\`\nComming Soon..\n\`\`\`\n\n` +
+          `\`\`\`\nzypher.ateex.cloud:19500\n\`\`\`\n\n` +
 
           `📱 **Bedrock Edition IP:**\n` +
-          `\`\`\`\nComming Soon..\n\`\`\`\n\n` +
+          `\`\`\`\nzypher.ateex.cloud\n\`\`\`\n\n` +
 
           `🔌 **Bedrock Port:**\n` +
-          `\`\`\`\nComming Soon..\n\`\`\`\n\n` +
+          `\`\`\`\n19500\n\`\`\`\n\n` +
 
           `📋 Easy to copy above!`
         )
