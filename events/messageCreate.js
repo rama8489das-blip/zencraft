@@ -104,10 +104,10 @@ module.exports = {
         .setColor("#57F287")
         .setDescription(
           `💻 **Java Edition IP:**\n` +
-          `\`\`\`\nzypher.ateex.cloud:19500\n\`\`\`\n\n` +
+          `\`\`\`\nzencraft.primemc.in:19500\n\`\`\`\n\n` +
 
           `📱 **Bedrock Edition IP:**\n` +
-          `\`\`\`\nzypher.ateex.cloud\n\`\`\`\n\n` +
+          `\`\`\`\nzencraft.primemc.in\n\`\`\`\n\n` +
 
           `🔌 **Bedrock Port:**\n` +
           `\`\`\`\n19500\n\`\`\`\n\n` +
