@@ -1,25 +1,22 @@
-const { EmbedBuilder } = require('discord.js');
-const mcstatus = require('mcstatus');
+const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
+const util = require('minecraft-server-util');
 
 module.exports = {
-  name: 'mcstatus',
-  description: 'Check Minecraft server status',
-  
-  async execute(message) {
+  data: new SlashCommandBuilder()
+    .setName('mcstatus')
+    .setDescription('Check ZENCRAFT SMP server status'),
 
-    const server = new mcstatus.JavaServer({
-      host: 'zencraft.primemc.in',
-      port: 19500
-    });
+  async execute(interaction) {
+    await interaction.deferReply();
 
     try {
-      const status = await server.status();
+      const status = await util.status('zencraft.primemc.in', 19500);
 
       const embed = new EmbedBuilder()
         .setColor('#00ff00')
         .setTitle('🟢 ZENCRAFT SMP Server Status')
         .addFields(
-          { name: 'IP', value: '`zencraft.primemc.in:19500`', inline: false },
+          { name: 'IP', value: '`zencraft.primemc.in:19500`' },
           { name: 'Players', value: `${status.players.online} / ${status.players.max}`, inline: true },
           { name: 'Version', value: status.version.name, inline: true },
           { name: 'Ping', value: `${status.roundTripLatency}ms`, inline: true }
@@ -27,7 +24,7 @@ module.exports = {
         .setFooter({ text: 'ZENCRAFT SMP' })
         .setTimestamp();
 
-      message.channel.send({ embeds: [embed] });
+      await interaction.editReply({ embeds: [embed] });
 
     } catch (error) {
 
@@ -39,7 +36,7 @@ module.exports = {
           { name: 'IP', value: '`zencraft.primemc.in:19500`' }
         );
 
-      message.channel.send({ embeds: [embed] });
+      await interaction.editReply({ embeds: [embed] });
     }
   }
 };
