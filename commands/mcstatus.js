@@ -2,6 +2,7 @@ const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 const util = require('minecraft-server-util');
 
 let panelRunning = false;
+let panelInterval = null;
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -10,8 +11,8 @@ module.exports = {
 
   async execute(interaction) {
     try {
-      // ✅ ALWAYS defer FIRST
-      await interaction.deferReply({ flags: 64 });
+      // ✅ Defer immediately (SAFE)
+      await interaction.deferReply({ ephemeral: true });
 
       if (panelRunning) {
         return await interaction.editReply('⚠️ Panel already running!');
@@ -22,9 +23,10 @@ module.exports = {
       const panelMessage = await interaction.channel.send('🔄 Loading server status...');
       await interaction.editReply('✅ Live panel created!');
 
-      setInterval(async () => {
+      // ✅ Store interval so we can control it
+      panelInterval = setInterval(async () => {
         try {
-          const status = await util.status('zencraft.primemc.in', 19500);
+          const status = await util.status('zencraft.primemc.in', 19500, { timeout: 5000 });
 
           const motd = status.motd?.clean || 'No MOTD';
 
@@ -40,32 +42,30 @@ module.exports = {
               { name: '📡 IP', value: '`zencraft.primemc.in:19500`' },
               { name: '📜 MOTD', value: motd },
               { name: '👥 Players', value: `Online: ${status.players.online}\nMax: ${status.players.max}`, inline: true },
-              { name: '🧍 Player List', value: playerList },
               { name: '⚙️ Version', value: status.version.name, inline: true },
-              { name: '🏓 Ping', value: `${status.roundTripLatency}ms`, inline: true }
+              { name: '🏓 Ping', value: `${status.roundTripLatency}ms`, inline: true },
+              { name: '🧍 Player List', value: playerList }
             )
             .setFooter({ text: 'Powered by ZENCRAFT SMP' })
             .setTimestamp();
 
           await panelMessage.edit({ embeds: [embed], content: '' });
 
-        } catch {
-          await panelMessage.edit({
-            embeds: [
-              new EmbedBuilder()
-                .setColor('#ff0000')
-                .setTitle('🔴 Server Offline')
-                .setFooter({ text: 'Powered by ZENCRAFT SMP' })
-            ],
-            content: ''
-          });
+        } catch (err) {
+          const offlineEmbed = new EmbedBuilder()
+            .setColor('#ff0000')
+            .setTitle('🔴 Server Offline')
+            .setDescription('Unable to fetch server status.')
+            .setFooter({ text: 'Powered by ZENCRAFT SMP' })
+            .setTimestamp();
+
+          await panelMessage.edit({ embeds: [offlineEmbed], content: '' });
         }
       }, 10000);
 
     } catch (error) {
-      console.error(error);
+      console.error('MCSTATUS ERROR:', error);
 
-      // ✅ FIX: NEVER use reply here
       if (interaction.deferred || interaction.replied) {
         await interaction.editReply('❌ Failed to create panel.');
       }
