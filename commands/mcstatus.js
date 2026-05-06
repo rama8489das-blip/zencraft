@@ -1,4 +1,4 @@
-const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
+const { SlashCommandBuilder, EmbedBuilder, MessageFlags } = require('discord.js');
 const util = require('minecraft-server-util');
 
 let panelRunning = false;
@@ -10,9 +10,11 @@ module.exports = {
     .setDescription('Create live ZENCRAFT SMP status panel'),
 
   async execute(interaction) {
+
+    // ✅ MUST BE FIRST LINE (NO try before this)
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+
     try {
-      // ✅ Defer immediately (SAFE)
-      await interaction.deferReply({ ephemeral: true });
 
       if (panelRunning) {
         return await interaction.editReply('⚠️ Panel already running!');
@@ -23,10 +25,14 @@ module.exports = {
       const panelMessage = await interaction.channel.send('🔄 Loading server status...');
       await interaction.editReply('✅ Live panel created!');
 
-      // ✅ Store interval so we can control it
+      // ✅ clear old interval if exists
+      if (panelInterval) clearInterval(panelInterval);
+
       panelInterval = setInterval(async () => {
         try {
-          const status = await util.status('zencraft.primemc.in', 19500, { timeout: 5000 });
+          const status = await util.status('zencraft.primemc.in', 19500, {
+            timeout: 5000
+          });
 
           const motd = status.motd?.clean || 'No MOTD';
 
@@ -66,9 +72,11 @@ module.exports = {
     } catch (error) {
       console.error('MCSTATUS ERROR:', error);
 
-      if (interaction.deferred || interaction.replied) {
-        await interaction.editReply('❌ Failed to create panel.');
-      }
+      try {
+        if (interaction.deferred || interaction.replied) {
+          await interaction.editReply('❌ Failed to create panel.');
+        }
+      } catch {}
     }
   }
 };
