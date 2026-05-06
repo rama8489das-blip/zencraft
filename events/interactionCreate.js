@@ -14,10 +14,29 @@ module.exports = {
   name: 'interactionCreate',
   async execute(interaction, client) {
 
-    // ✅ COMMAND HANDLER
+    // =========================
+    // ✅ COMMAND HANDLER (FIXED)
+    // =========================
     if (interaction.isChatInputCommand()) {
       const cmd = client.commands.get(interaction.commandName);
-      if (cmd) return cmd.execute(interaction, client);
+      if (!cmd) return;
+
+      try {
+        await cmd.execute(interaction, client);
+      } catch (error) {
+        console.error(error);
+
+        // ✅ SAFE RESPONSE (prevents crash)
+        if (interaction.deferred || interaction.replied) {
+          await interaction.editReply('❌ Error executing command');
+        } else {
+          await interaction.reply({
+            content: '❌ Error executing command',
+            flags: 64
+          });
+        }
+      }
+      return;
     }
 
     // =========================
@@ -25,72 +44,69 @@ module.exports = {
     // =========================
     if (interaction.isButton()) {
 
-      // 🎉 GIVEAWAY JOIN / LEAVE
-      if (interaction.customId === 'gw_join') {
+      try {
 
-        const g = client.giveaways.get(interaction.message.id);
-        if (!g || g.ended) {
-          return interaction.reply({ content: "Giveaway ended!", ephemeral: true });
+        // 🎉 GIVEAWAY
+        if (interaction.customId === 'gw_join') {
+
+          const g = client.giveaways.get(interaction.message.id);
+          if (!g || g.ended) {
+            return interaction.reply({ content: "Giveaway ended!", flags: 64 });
+          }
+
+          if (g.users.has(interaction.user.id)) {
+            g.users.delete(interaction.user.id);
+            return interaction.reply({ content: "❌ You left the giveaway", flags: 64 });
+          } else {
+            g.users.add(interaction.user.id);
+            return interaction.reply({ content: "✅ You joined the giveaway", flags: 64 });
+          }
         }
 
-        if (g.users.has(interaction.user.id)) {
-          g.users.delete(interaction.user.id);
+        // =========================
+        // 📊 POLL SYSTEM
+        // =========================
+        if (interaction.customId.startsWith('poll_')) {
+
+          const [_, pollId, index] = interaction.customId.split('_');
+          const poll = client.polls.get(pollId);
+
+          if (!poll || poll.ended) {
+            return interaction.reply({ content: "Poll ended!", flags: 64 });
+          }
+
+          const userId = interaction.user.id;
+
+          Object.values(poll.votes).forEach(set => set.delete(userId));
+          poll.votes[index].add(userId);
+
           return interaction.reply({
-            content: "❌ You left the giveaway",
-            ephemeral: true
-          });
-        } else {
-          g.users.add(interaction.user.id);
-          return interaction.reply({
-            content: "✅ You joined the giveaway",
-            ephemeral: true
+            content: "✅ Vote updated!",
+            flags: 64
           });
         }
-      }
 
-      // =========================
-      // 📊 POLL SYSTEM
-      // =========================
-      if (interaction.customId.startsWith('poll_')) {
+        // =========================
+        // ❌ CLOSE TICKET
+        // =========================
+        if (interaction.customId === 'ticket_close') {
 
-        const [_, pollId, index] = interaction.customId.split('_');
-        const poll = client.polls.get(pollId);
+          const channel = interaction.channel;
 
-        if (!poll || poll.ended) {
-          return interaction.reply({ content: "Poll ended!", ephemeral: true });
+          const userId = [...activeTickets.entries()]
+            .find(([_, ch]) => ch === channel.id)?.[0];
+
+          if (userId) activeTickets.delete(userId);
+
+          await interaction.reply({ content: "🔒 Closing ticket...", flags: 64 });
+
+          setTimeout(() => {
+            channel.delete().catch(() => {});
+          }, 3000);
         }
 
-        const userId = interaction.user.id;
-
-        // ❌ REMOVE OLD VOTES
-        Object.values(poll.votes).forEach(set => set.delete(userId));
-
-        // ✅ ADD NEW VOTE
-        poll.votes[index].add(userId);
-
-        return interaction.reply({
-          content: "✅ Vote updated!",
-          ephemeral: true
-        });
-      }
-
-      // =========================
-      // ❌ CLOSE TICKET
-      // =========================
-      if (interaction.customId === 'ticket_close') {
-
-        const channel = interaction.channel;
-
-        const userId = [...activeTickets.entries()]
-          .find(([_, ch]) => ch === channel.id)?.[0];
-
-        if (userId) activeTickets.delete(userId);
-
-        await interaction.reply("🔒 Closing ticket...");
-
-        setTimeout(() => {
-          channel.delete().catch(() => {});
-        }, 3000);
+      } catch (err) {
+        console.error(err);
       }
     }
 
@@ -101,65 +117,66 @@ module.exports = {
 
       if (interaction.customId === 'ticket_menu') {
 
-        const type = interaction.values[0];
-        const user = interaction.user;
+        try {
+          const type = interaction.values[0];
+          const user = interaction.user;
 
-        // ❌ ONE TICKET LIMIT
-        if (activeTickets.has(user.id)) {
-          return interaction.reply({
-            content: "❌ You already have an open ticket!",
-            ephemeral: true
+          if (activeTickets.has(user.id)) {
+            return interaction.reply({
+              content: "❌ You already have an open ticket!",
+              flags: 64
+            });
+          }
+
+          const channel = await interaction.guild.channels.create({
+            name: `ticket-${type}-${user.username}`,
+            type: ChannelType.GuildText,
+            permissionOverwrites: [
+              {
+                id: interaction.guild.id,
+                deny: [PermissionsBitField.Flags.ViewChannel]
+              },
+              {
+                id: user.id,
+                allow: [
+                  PermissionsBitField.Flags.ViewChannel,
+                  PermissionsBitField.Flags.SendMessages
+                ]
+              }
+            ]
           });
+
+          activeTickets.set(user.id, channel.id);
+
+          const embed = new EmbedBuilder()
+            .setTitle(`🎫 ${type.toUpperCase()} TICKET`)
+            .setColor("#57F287")
+            .setDescription(
+              `Hello ${user},\n\nSupport will assist you soon.\n\n📌 Type: **${type}**`
+            )
+            .setFooter({ text: "🔥 Powered by Zencraft" });
+
+          const row = new ActionRowBuilder().addComponents(
+            new ButtonBuilder()
+              .setCustomId('ticket_close')
+              .setLabel('Close Ticket')
+              .setStyle(ButtonStyle.Danger)
+          );
+
+          await channel.send({
+            content: "@everyone",
+            embeds: [embed],
+            components: [row]
+          });
+
+          return interaction.reply({
+            content: `✅ Ticket created: ${channel}`,
+            flags: 64
+          });
+
+        } catch (err) {
+          console.error(err);
         }
-
-        const channel = await interaction.guild.channels.create({
-          name: `ticket-${type}-${user.username}`,
-          type: ChannelType.GuildText,
-
-          permissionOverwrites: [
-            {
-              id: interaction.guild.id,
-              deny: [PermissionsBitField.Flags.ViewChannel]
-            },
-            {
-              id: user.id,
-              allow: [
-                PermissionsBitField.Flags.ViewChannel,
-                PermissionsBitField.Flags.SendMessages
-              ]
-            }
-          ]
-        });
-
-        activeTickets.set(user.id, channel.id);
-
-        const embed = new EmbedBuilder()
-          .setTitle(`🎫 ${type.toUpperCase()} TICKET`)
-          .setColor("#57F287")
-          .setDescription(
-            `Hello ${user},\n\n` +
-            `Support will assist you soon.\n\n` +
-            `📌 Type: **${type}**`
-          )
-          .setFooter({ text: "🔥 Powered by Zencraft" });
-
-        const row = new ActionRowBuilder().addComponents(
-          new ButtonBuilder()
-            .setCustomId('ticket_close')
-            .setLabel('Close Ticket')
-            .setStyle(ButtonStyle.Danger)
-        );
-
-        await channel.send({
-          content: "@everyone",
-          embeds: [embed],
-          components: [row]
-        });
-
-        return interaction.reply({
-          content: `✅ Ticket created: ${channel}`,
-          ephemeral: true
-        });
       }
     }
   }
