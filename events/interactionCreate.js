@@ -15,7 +15,7 @@ module.exports = {
   async execute(interaction, client) {
 
     // =========================
-    // ✅ COMMAND HANDLER (FIXED)
+    // ✅ COMMAND HANDLER
     // =========================
     if (interaction.isChatInputCommand()) {
       const cmd = client.commands.get(interaction.commandName);
@@ -24,16 +24,19 @@ module.exports = {
       try {
         await cmd.execute(interaction, client);
       } catch (error) {
-        console.error(error);
+        console.error('COMMAND ERROR:', error);
 
-        // ✅ SAFE RESPONSE (prevents crash)
-        if (interaction.deferred || interaction.replied) {
-          await interaction.editReply('❌ Error executing command');
-        } else {
-          await interaction.reply({
-            content: '❌ Error executing command',
-            flags: 64
-          });
+        try {
+          if (interaction.deferred || interaction.replied) {
+            await interaction.editReply({ content: '❌ Error executing command' });
+          } else {
+            await interaction.reply({
+              content: '❌ Error executing command',
+              flags: 64
+            });
+          }
+        } catch (err) {
+          console.error('Reply failed:', err);
         }
       }
       return;
@@ -48,18 +51,24 @@ module.exports = {
 
         // 🎉 GIVEAWAY
         if (interaction.customId === 'gw_join') {
-
           const g = client.giveaways.get(interaction.message.id);
+
           if (!g || g.ended) {
-            return interaction.reply({ content: "Giveaway ended!", flags: 64 });
+            try {
+              return await interaction.reply({ content: "Giveaway ended!", flags: 64 });
+            } catch {}
           }
 
           if (g.users.has(interaction.user.id)) {
             g.users.delete(interaction.user.id);
-            return interaction.reply({ content: "❌ You left the giveaway", flags: 64 });
+            try {
+              return await interaction.reply({ content: "❌ You left the giveaway", flags: 64 });
+            } catch {}
           } else {
             g.users.add(interaction.user.id);
-            return interaction.reply({ content: "✅ You joined the giveaway", flags: 64 });
+            try {
+              return await interaction.reply({ content: "✅ You joined the giveaway", flags: 64 });
+            } catch {}
           }
         }
 
@@ -72,18 +81,23 @@ module.exports = {
           const poll = client.polls.get(pollId);
 
           if (!poll || poll.ended) {
-            return interaction.reply({ content: "Poll ended!", flags: 64 });
+            try {
+              return await interaction.reply({ content: "Poll ended!", flags: 64 });
+            } catch {}
           }
 
           const userId = interaction.user.id;
 
+          // remove previous votes
           Object.values(poll.votes).forEach(set => set.delete(userId));
           poll.votes[index].add(userId);
 
-          return interaction.reply({
-            content: "✅ Vote updated!",
-            flags: 64
-          });
+          try {
+            return await interaction.reply({
+              content: "✅ Vote updated!",
+              flags: 64
+            });
+          } catch {}
         }
 
         // =========================
@@ -98,7 +112,9 @@ module.exports = {
 
           if (userId) activeTickets.delete(userId);
 
-          await interaction.reply({ content: "🔒 Closing ticket...", flags: 64 });
+          try {
+            await interaction.reply({ content: "🔒 Closing ticket...", flags: 64 });
+          } catch {}
 
           setTimeout(() => {
             channel.delete().catch(() => {});
@@ -106,8 +122,10 @@ module.exports = {
         }
 
       } catch (err) {
-        console.error(err);
+        console.error('BUTTON ERROR:', err);
       }
+
+      return;
     }
 
     // =========================
@@ -122,14 +140,21 @@ module.exports = {
           const user = interaction.user;
 
           if (activeTickets.has(user.id)) {
-            return interaction.reply({
-              content: "❌ You already have an open ticket!",
-              flags: 64
-            });
+            try {
+              return await interaction.reply({
+                content: "❌ You already have an open ticket!",
+                flags: 64
+              });
+            } catch {}
           }
 
+          // ✅ SAFE CHANNEL NAME
+          const safeName = `ticket-${type}-${user.username}`
+            .toLowerCase()
+            .replace(/[^a-z0-9-]/g, '');
+
           const channel = await interaction.guild.channels.create({
-            name: `ticket-${type}-${user.username}`,
+            name: safeName,
             type: ChannelType.GuildText,
             permissionOverwrites: [
               {
@@ -169,13 +194,15 @@ module.exports = {
             components: [row]
           });
 
-          return interaction.reply({
-            content: `✅ Ticket created: ${channel}`,
-            flags: 64
-          });
+          try {
+            return await interaction.reply({
+              content: `✅ Ticket created: ${channel}`,
+              flags: 64
+            });
+          } catch {}
 
         } catch (err) {
-          console.error(err);
+          console.error('TICKET ERROR:', err);
         }
       }
     }
