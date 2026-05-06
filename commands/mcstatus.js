@@ -1,7 +1,6 @@
 const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
-const axios = require('axios';
+const axios = require('axios');
 
-// Store active intervals per guild
 const activeUpdates = new Map();
 
 module.exports = {
@@ -9,50 +8,43 @@ module.exports = {
     .setName('mcstatus')
     .setDescription('Check Minecraft server (Java + Bedrock)')
     .addStringOption(o =>
-      o.setName('ip')
-        .setDescription('Server IP or domain')
-        .setRequired(true)
+      o.setName('ip').setDescription('Server IP').setRequired(true)
     )
     .addIntegerOption(o =>
-      o.setName('port')
-        .setDescription('Custom port (optional)')
+      o.setName('port').setDescription('Server port')
     ),
 
   async execute(interaction) {
+
     const ip = interaction.options.getString('ip');
     const port = interaction.options.getInteger('port');
 
     const address = port ? `${ip}:${port}` : ip;
     const guildId = interaction.guild.id;
 
-    // ❌ Prevent multiple loops
     if (activeUpdates.has(guildId)) {
       return interaction.reply({
-        content: "❌ Already running a live status in this server.",
+        content: "❌ Already running in this server",
         flags: 64
       });
     }
 
-    // ✅ FIX: defer reply (prevents timeout)
+    // ✅ FIX: prevent timeout
     await interaction.deferReply({ flags: 64 });
 
-    // 🔥 Fetch function (Java → Bedrock fallback)
+    // 🔥 FETCH
     const fetchStatus = async () => {
       try {
-        // Java
         const java = await axios.get(
-          `https://api.mcstatus.io/v2/status/java/${ip}:${port || 25565}`,
-          { timeout: 5000 }
+          `https://api.mcstatus.io/v2/status/java/${ip}:${port || 25565}`
         );
 
         if (java.data?.online) {
           return { type: "Java", data: java.data };
         }
 
-        // Bedrock fallback
         const bedrock = await axios.get(
-          `https://api.mcstatus.io/v2/status/bedrock/${ip}:${port || 19132}`,
-          { timeout: 5000 }
+          `https://api.mcstatus.io/v2/status/bedrock/${ip}:${port || 19132}`
         );
 
         if (bedrock.data?.online) {
@@ -60,13 +52,12 @@ module.exports = {
         }
 
         return null;
-
-      } catch (err) {
+      } catch {
         return null;
       }
     };
 
-    // 🎨 Embed builder
+    // 🎨 EMBED
     const buildEmbed = (result) => {
       const embed = new EmbedBuilder()
         .setTitle("🟢 Minecraft Server Status")
@@ -76,44 +67,51 @@ module.exports = {
       if (!result || !result.data?.online) {
         return embed
           .setColor("#ED4245")
-          .setDescription(`❌ **Server Offline**\n\n🌐 **IP:** ${address}`);
+          .setDescription(`❌ Server Offline\n\n🌐 IP: ${address}`);
       }
 
       const data = result.data;
 
-      const motd =
-        data.motd?.clean?.join("\n") ||
-        data.motd?.raw ||
-        "No MOTD";
+      // ✅ SAFE MOTD FIX
+      let motd = "No MOTD";
+
+      if (Array.isArray(data.motd?.clean)) {
+        motd = data.motd.clean.join("\n");
+      } else if (typeof data.motd?.clean === "string") {
+        motd = data.motd.clean;
+      } else if (Array.isArray(data.motd?.raw)) {
+        motd = data.motd.raw.join("\n");
+      } else if (typeof data.motd?.raw === "string") {
+        motd = data.motd.raw;
+      }
 
       const online = data.players?.online ?? 0;
       const max = data.players?.max ?? 0;
 
-      const playerList = data.players?.list?.length
+      const playerList = Array.isArray(data.players?.list)
         ? data.players.list.slice(0, 10).join(", ")
         : "No players online";
 
       return embed
         .setColor("#57F287")
         .setDescription(
-          `🌐 **IP:** ${address}\n` +
-          `🧩 **Type:** ${result.type}\n\n` +
-          `📜 **MOTD:**\n${motd}\n\n` +
-          `👥 **Players:** ${online} / ${max}\n` +
-          `🧑 **Online List:**\n${playerList}\n\n` +
-          `🟢 **Status:** Online`
+          `🌐 IP: ${address}\n` +
+          `🧩 Type: ${result.type}\n\n` +
+          `📜 MOTD:\n${motd}\n\n` +
+          `👥 Players: ${online} / ${max}\n` +
+          `🧑 List: ${playerList}\n\n` +
+          `🟢 Status: Online`
         );
     };
 
-    // 🔄 First fetch
+    // FIRST LOAD
     let data = await fetchStatus();
 
-    // ✅ FIX: use editReply instead of send
     const msg = await interaction.editReply({
       embeds: [buildEmbed(data)]
     });
 
-    // 🔁 Live update loop
+    // 🔁 LOOP
     const interval = setInterval(async () => {
       const newData = await fetchStatus();
 
@@ -124,16 +122,11 @@ module.exports = {
 
     activeUpdates.set(guildId, interval);
 
-    // 🧹 Cleanup when bot restarts or message deleted
-    const cleanup = () => {
-      clearInterval(interval);
-      activeUpdates.delete(guildId);
-    };
-
-    // Stop loop if message deleted
+    // 🧹 CLEANUP
     const deleteHandler = (deletedMsg) => {
       if (deletedMsg.id === msg.id) {
-        cleanup();
+        clearInterval(interval);
+        activeUpdates.delete(guildId);
         interaction.client.off('messageDelete', deleteHandler);
       }
     };
