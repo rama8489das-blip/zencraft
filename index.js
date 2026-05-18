@@ -15,7 +15,7 @@ const Parser = require('rss-parser');
 const express = require('express');
 
 // =======================
-// 🌐 EXPRESS SERVER (IMPORTANT FOR UPTIME ROBOT)
+// 🌐 EXPRESS SERVER
 // =======================
 const app = express();
 
@@ -24,12 +24,13 @@ app.get('/', (req, res) => {
 });
 
 const PORT = process.env.PORT || 3000;
+
 app.listen(PORT, () => {
   console.log(`🌐 Web server running on port ${PORT}`);
 });
 
 // =======================
-// 🔥 DISCORD CLIENT SETUP
+// 🔥 DISCORD CLIENT
 // =======================
 const client = new Client({
   intents: [
@@ -56,44 +57,70 @@ const parser = new Parser();
 // ✅ LOAD COMMANDS
 // =======================
 if (fs.existsSync('./commands')) {
-  fs.readdirSync('./commands').forEach(file => {
-    try {
-      const cmd = require(`./commands/${file}`);
 
-      if (!cmd.data || !cmd.execute) {
-        console.log(`❌ Skipping ${file}`);
-        return;
+  const commandFiles = fs.readdirSync('./commands')
+    .filter(file => file.endsWith('.js'));
+
+  for (const file of commandFiles) {
+
+    try {
+
+      const command = require(`./commands/${file}`);
+
+      if (!command.data || !command.execute) {
+        console.log(`❌ Invalid command: ${file}`);
+        continue;
       }
 
-      client.commands.set(cmd.data.name, cmd);
-      console.log(`✅ Loaded command: ${file}`);
+      client.commands.set(command.data.name, command);
+
+      console.log(`✅ Loaded command: ${command.data.name}`);
 
     } catch (err) {
-      console.error(`❌ Command error (${file}):`, err.message);
+
+      console.error(`❌ Error loading ${file}:`, err);
+
     }
-  });
+  }
 }
 
 // =======================
 // ✅ LOAD EVENTS
 // =======================
 if (fs.existsSync('./events')) {
-  fs.readdirSync('./events').forEach(file => {
-    try {
-      const ev = require(`./events/${file}`);
 
-      if (!ev.name || !ev.execute) {
-        console.log(`❌ Skipping ${file}`);
-        return;
+  const eventFiles = fs.readdirSync('./events')
+    .filter(file => file.endsWith('.js'));
+
+  for (const file of eventFiles) {
+
+    try {
+
+      const event = require(`./events/${file}`);
+
+      if (!event.name || !event.execute) {
+        console.log(`❌ Invalid event: ${file}`);
+        continue;
       }
 
-      client.on(ev.name, (...args) => ev.execute(...args, client));
-      console.log(`✅ Loaded event: ${file}`);
+      if (event.once) {
+        client.once(event.name, (...args) =>
+          event.execute(...args, client)
+        );
+      } else {
+        client.on(event.name, (...args) =>
+          event.execute(...args, client)
+        );
+      }
+
+      console.log(`✅ Loaded event: ${event.name}`);
 
     } catch (err) {
-      console.error(`❌ Event error (${file}):`, err.message);
+
+      console.error(`❌ Error loading ${file}:`, err);
+
     }
-  });
+  }
 }
 
 // =======================
@@ -102,7 +129,9 @@ if (fs.existsSync('./events')) {
 let lastVideo = null;
 
 setInterval(async () => {
+
   try {
+
     const feed = await parser.parseURL(
       `https://www.youtube.com/feeds/videos.xml?channel_id=${process.env.YOUTUBE_CHANNEL_ID}`
     );
@@ -111,54 +140,68 @@ setInterval(async () => {
 
     const latest = feed.items[0];
 
-    // prevent duplicate on restart
     if (!lastVideo) {
       lastVideo = latest.id;
       return;
     }
 
     if (latest.id !== lastVideo) {
+
       lastVideo = latest.id;
 
-      const channel = await client.channels.fetch(process.env.YT_CHANNEL).catch(() => null);
+      const channel = await client.channels.fetch(process.env.YT_CHANNEL)
+        .catch(() => null);
 
       if (!channel) {
-        console.log("❌ YouTube channel not found");
+        console.log('❌ YouTube channel not found');
         return;
       }
 
       const videoId = latest.id.split(':').pop();
 
       const embed = new EmbedBuilder()
-        .setTitle("📺 New Video Uploaded!")
-        .setColor("#FF0000")
-        .setDescription(`🎬 **${latest.title}**\n\n👉 [Watch Now](${latest.link})`)
-        .setImage(`https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`)
-        .setFooter({ text: "🔥 Powered by Zencraft SMP" })
+        .setTitle('📺 New Video Uploaded!')
+        .setColor('#ff0000')
+        .setDescription(
+          `🎬 **${latest.title}**\n\n👉 [Watch Now](${latest.link})`
+        )
+        .setImage(
+          `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`
+        )
+        .setFooter({
+          text: '🔥 Powered by Zencraft SMP'
+        })
         .setTimestamp();
 
       await channel.send({
-        content: "@everyone 🚨 NEW VIDEO!",
+        content: '@everyone 🚨 NEW VIDEO!',
         embeds: [embed]
       });
 
-      console.log("✅ YouTube notification sent");
+      console.log('✅ YouTube notification sent');
     }
 
   } catch (err) {
-    console.error("❌ YouTube error:", err.message);
+
+    console.error('❌ YouTube Error:', err.message);
+
   }
-}, 300000); // 5 minutes
+
+}, 300000);
 
 // =======================
 // 🔥 READY EVENT
 // =======================
-client.once('ready', () => {
+client.once('clientReady', () => {
+
   console.log(`🚀 ${client.user.tag} is ONLINE`);
+
 });
 
 // =======================
 // 🚀 LOGIN
 // =======================
 client.login(process.env.TOKEN)
-  .catch(err => console.error("❌ Login failed:", err.message));
+  .catch(err => {
+    console.error('❌ Login failed:', err);
+  });
