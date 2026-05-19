@@ -9,15 +9,14 @@ const rest = new REST({ version: '10' })
 
   try {
 
-    console.log('🗑 Removing old global commands...');
+    console.log('🗑 Removing OLD global commands...');
 
-    // REMOVE OLD GLOBAL COMMANDS
     await rest.put(
       Routes.applicationCommands(process.env.CLIENT_ID),
       { body: [] }
     );
 
-    console.log('✅ Old global commands removed.');
+    console.log('✅ OLD global commands removed.');
 
   } catch (err) {
 
