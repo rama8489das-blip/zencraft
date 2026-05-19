@@ -2,7 +2,7 @@ const Parser = require('rss-parser');
 const parser = new Parser();
 
 module.exports = {
-  name: 'ready',
+  name: 'clientReady',
   once: true,
 
   async execute(client) {
@@ -12,6 +12,7 @@ module.exports = {
     let lastVideo = null;
 
     setInterval(async () => {
+
       try {
 
         const feed = await parser.parseURL(
@@ -24,27 +25,37 @@ module.exports = {
 
         // 🔥 FIRST RUN SKIP
         if (!lastVideo) {
+
           lastVideo = latest.id;
           return;
+
         }
 
         if (latest.id !== lastVideo) {
+
           lastVideo = latest.id;
 
-          // ✅ YOUR YT CHANNEL ID
+          // ✅ YOUR DISCORD CHANNEL ID
           const channel = client.channels.cache.get("1467154654252105870");
 
-          if (!channel) return console.log("❌ Wrong channel ID");
+          if (!channel) {
+
+            console.log("❌ Wrong channel ID");
+            return;
+
+          }
 
           await channel.send({
             content: "@everyone 🚨 NEW VIDEO!",
             embeds: [
               {
                 title: "📺 New Video Uploaded!",
-                description: `🎬 **${latest.title}**\n\n👉 [Watch Now](${latest.link})`,
+                description:
+                  `🎬 **${latest.title}**\n\n👉 [Watch Now](${latest.link})`,
                 color: 0xFF0000,
                 image: {
-                  url: `https://img.youtube.com/vi/${latest.id.split(':')[2]}/maxresdefault.jpg`
+                  url:
+                    `https://img.youtube.com/vi/${latest.id.split(':')[2]}/maxresdefault.jpg`
                 },
                 footer: {
                   text: "🔥 Powered by Zencraft SMP"
@@ -55,11 +66,16 @@ module.exports = {
           });
 
           console.log("✅ YouTube notification sent");
+
         }
 
       } catch (err) {
+
         console.log("YouTube Error:", err.message);
+
       }
-    }, 300000); // every 5 min
+
+    }, 300000);
+
   }
 };
