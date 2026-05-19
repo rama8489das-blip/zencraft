@@ -68,8 +68,10 @@ if (fs.existsSync('./commands')) {
       const command = require(`./commands/${file}`);
 
       if (!command.data || !command.execute) {
+
         console.log(`❌ Invalid command: ${file}`);
         continue;
+
       }
 
       client.commands.set(command.data.name, command);
@@ -99,18 +101,24 @@ if (fs.existsSync('./events')) {
       const event = require(`./events/${file}`);
 
       if (!event.name || !event.execute) {
+
         console.log(`❌ Invalid event: ${file}`);
         continue;
+
       }
 
       if (event.once) {
+
         client.once(event.name, (...args) =>
           event.execute(...args, client)
         );
+
       } else {
+
         client.on(event.name, (...args) =>
           event.execute(...args, client)
         );
+
       }
 
       console.log(`✅ Loaded event: ${event.name}`);
@@ -140,21 +148,27 @@ setInterval(async () => {
 
     const latest = feed.items[0];
 
+    // Prevent duplicate on restart
     if (!lastVideo) {
+
       lastVideo = latest.id;
       return;
+
     }
 
     if (latest.id !== lastVideo) {
 
       lastVideo = latest.id;
 
-      const channel = await client.channels.fetch(process.env.YT_CHANNEL)
+      const channel = await client.channels
+        .fetch(process.env.YT_CHANNEL)
         .catch(() => null);
 
       if (!channel) {
+
         console.log('❌ YouTube channel not found');
         return;
+
       }
 
       const videoId = latest.id.split(':').pop();
@@ -179,6 +193,7 @@ setInterval(async () => {
       });
 
       console.log('✅ YouTube notification sent');
+
     }
 
   } catch (err) {
@@ -190,18 +205,11 @@ setInterval(async () => {
 }, 300000);
 
 // =======================
-// 🔥 READY EVENT
-// =======================
-client.once('clientReady', () => {
-
-  console.log(`🚀 ${client.user.tag} is ONLINE`);
-
-});
-
-// =======================
 // 🚀 LOGIN
 // =======================
 client.login(process.env.TOKEN)
   .catch(err => {
+
     console.error('❌ Login failed:', err);
+
   });
