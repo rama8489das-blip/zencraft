@@ -1,40 +1,51 @@
 const {
-    SlashCommandBuilder,
-    EmbedBuilder,
-    ActionRowBuilder,
-    ButtonBuilder,
-    ButtonStyle
+  SlashCommandBuilder,
+  EmbedBuilder,
+  ActionRowBuilder,
+  ButtonBuilder,
+  ButtonStyle,
+  PermissionFlagsBits
 } = require('discord.js');
 
 module.exports = {
-    data: new SlashCommandBuilder()
-        .setName('verifypanel')
-        .setDescription('Send verification panel'),
 
-    async execute(interaction) {
+  data: new SlashCommandBuilder()
+    .setName('verifypanel')
+    .setDescription('Send verification panel')
+    .setDefaultMemberPermissions(
+      PermissionFlagsBits.Administrator
+    ),
 
-        const embed = new EmbedBuilder()
-            .setColor('#ff4500')
-            .setTitle('🔒 Verification Required')
-            .setDescription(
-                'Click the button below to verify yourself and unlock access to the server.\n\n' +
-                '> You must verify before viewing any channels or chats.'
-            )
-            .setFooter({
-                text: '🔥 Powered By Zencraft'
-            });
+  async execute(interaction) {
 
-        const row = new ActionRowBuilder().addComponents(
-            new ButtonBuilder()
-                .setCustomId('verify_button')
-                .setLabel('Click To Verify')
-                .setEmoji('✅')
-                .setStyle(ButtonStyle.Success)
-        );
+    const embed = new EmbedBuilder()
+      .setTitle('✅ Zencraft Verification')
+      .setColor('#57F287')
+      .setDescription(
+        'Click the button below to verify yourself and access the server.'
+      )
+      .setFooter({
+        text: '🔥 Powered by Zencraft'
+      });
 
-        await interaction.reply({
-            embeds: [embed],
-            components: [row]
-        });
-    }
+    const row = new ActionRowBuilder().addComponents(
+
+      new ButtonBuilder()
+        .setCustomId('verify_button')
+        .setLabel('Click To Verify')
+        .setEmoji('✅')
+        .setStyle(ButtonStyle.Success)
+
+    );
+
+    await interaction.channel.send({
+      embeds: [embed],
+      components: [row]
+    });
+
+    await interaction.reply({
+      content: '✅ Verification panel sent.',
+      flags: 64
+    });
+  }
 };
