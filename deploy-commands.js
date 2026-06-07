@@ -5,7 +5,9 @@ const fs = require('fs');
 
 const commands = [];
 
-// LOAD COMMAND FILES
+// =======================
+// LOAD COMMANDS
+// =======================
 const commandFiles = fs
   .readdirSync('./commands')
   .filter(file => file.endsWith('.js'));
@@ -15,37 +17,43 @@ for (const file of commandFiles) {
     const command = require(`./commands/${file}`);
 
     if (!command.data) {
-      console.log(`❌ Skipping ${file} (no data)`);
+      console.log(`❌ Skipping ${file} (missing data)`);
       continue;
     }
 
     commands.push(command.data.toJSON());
 
-    console.log(`✅ Loaded command: ${command.data.name}`);
+    console.log(`✅ Loaded: ${command.data.name}`);
   } catch (err) {
     console.error(`❌ Error loading ${file}:`, err);
   }
 }
 
-// REST SETUP
-const rest = new REST({ version: '10' }).setToken(process.env.TOKEN);
+// =======================
+// REST CLIENT
+// =======================
+const rest = new REST({ version: '10' })
+  .setToken(process.env.TOKEN);
 
-// DEPLOY COMMANDS
+// =======================
+// DEPLOY GLOBAL COMMANDS
+// =======================
 (async () => {
   try {
-    console.log('🚀 Started refreshing application (/) commands...');
+    console.log(`🚀 Deploying ${commands.length} global commands...`);
 
-    // GUILD COMMANDS (instant update)
-    await rest.put(
-      Routes.applicationGuildCommands(
-        process.env.CLIENT_ID,
-        process.env.GUILD_ID
+    const data = await rest.put(
+      Routes.applicationCommands(
+        process.env.CLIENT_ID
       ),
       { body: commands }
     );
 
-    console.log('✅ Successfully reloaded application (/) commands.');
+    console.log(
+      `✅ Successfully deployed ${data.length} global commands.`
+    );
+
   } catch (error) {
-    console.error('❌ Deployment error:', error);
+    console.error('❌ Deployment Error:', error);
   }
 })();
