@@ -6,11 +6,11 @@ const {
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('play')
-        .setDescription('Play music from YouTube or Spotify')
+        .setDescription('Play music from YouTube')
         .addStringOption(option =>
             option
                 .setName('query')
-                .setDescription('Song name, YouTube URL or Spotify URL')
+                .setDescription('Song name or URL')
                 .setRequired(true)
         ),
 
@@ -21,6 +21,18 @@ module.exports = {
         if (!voiceChannel) {
             return interaction.reply({
                 content: '❌ Join a voice channel first.',
+                ephemeral: true
+            });
+        }
+
+        const permissions = voiceChannel.permissionsFor(interaction.client.user);
+
+        if (
+            !permissions.has('Connect') ||
+            !permissions.has('Speak')
+        ) {
+            return interaction.reply({
+                content: '❌ I need Connect and Speak permissions.',
                 ephemeral: true
             });
         }
@@ -38,13 +50,19 @@ module.exports = {
                     requestedBy: interaction.user,
                     nodeOptions: {
                         metadata: interaction.channel,
+                        volume: 75,
                         leaveOnEmpty: false,
                         leaveOnEnd: false,
-                        leaveOnStop: false,
-                        volume: 75
+                        leaveOnStop: false
                     }
                 }
             );
+
+            if (!result || !result.track) {
+                return interaction.editReply({
+                    content: '❌ No results found.'
+                });
+            }
 
             const track = result.track;
 
@@ -58,7 +76,6 @@ module.exports = {
                     `🎧 Requested By: ${interaction.user}`
                 )
                 .setThumbnail(track.thumbnail)
-                .setImage(track.thumbnail)
                 .setFooter({
                     text: '🔥 Powered by Zencraft'
                 })
@@ -68,14 +85,15 @@ module.exports = {
                 embeds: [embed]
             });
 
+            console.log(`▶️ Play Request: ${track.title}`);
+
         } catch (error) {
 
-            console.error(error);
+            console.error('PLAY ERROR:', error);
 
             await interaction.editReply({
-                content: '❌ Failed to play song. Check the URL or song name.'
+                content: `❌ Failed to play song.\n\`\`\`${error.message}\`\`\``
             });
-
         }
     }
 };
