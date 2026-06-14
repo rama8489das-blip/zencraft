@@ -1,7 +1,6 @@
 {
   "name": "zencraft-bot",
   "version": "1.0.0",
-  "description": "Zencraft Discord Bot",
   "main": "index.js",
   "scripts": {
     "start": "node index.js"
@@ -17,7 +16,8 @@
     "@discordjs/voice": "^0.18.0",
     "discord-player": "^7.1.1",
     "@discord-player/extractor": "^7.1.1",
-    "@discord-player/ffmpeg": "^7.1.1",
-    "ffmpeg-static": "^5.2.0"
+
+    "ffmpeg-static": "^5.2.0",
+    "@discordjs/opus": "^0.10.0"
   }
 }
