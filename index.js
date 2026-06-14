@@ -6,8 +6,7 @@ require('dotenv').config();
 const {
   Client,
   GatewayIntentBits,
-  Collection,
-  EmbedBuilder
+  Collection
 } = require('discord.js');
 
 const fs = require('fs');
@@ -47,24 +46,25 @@ const client = new Client({
 client.commands = new Collection();
 
 // =======================
-// 🎵 DISCORD PLAYER (FIXED)
+// 🎵 DISCORD PLAYER (FIXED v6+)
 // =======================
 const { Player } = require('discord-player');
+const { DefaultExtractors } = require('@discord-player/extractor');
 
 client.player = new Player(client);
 
-// Load extractors (IMPORTANT)
-(async () => {
+// Load extractors (CORRECT METHOD)
+async function loadExtractors() {
   try {
-    await client.player.extractors.loadDefault();
-    console.log('🎵 Extractors loaded');
+    await client.player.extractors.loadMulti(DefaultExtractors);
+    console.log('🎵 Extractors loaded successfully');
   } catch (err) {
     console.error('❌ Extractor load error:', err);
   }
-})();
+}
 
 // =======================
-// 🎧 PLAYER EVENTS (DEBUG)
+// 🎧 PLAYER EVENTS
 // =======================
 client.player.events.on('playerStart', (queue, track) => {
   console.log(`▶️ Now Playing: ${track.title}`);
@@ -96,8 +96,18 @@ if (fs.existsSync('./commands')) {
 }
 
 // =======================
+// 🤖 BOT READY
+// =======================
+client.once('ready', async () => {
+  console.log(`✅ Logged in as ${client.user.tag}`);
+
+  // Load extractors AFTER login (IMPORTANT FIX)
+  await loadExtractors();
+});
+
+// =======================
 // 🚀 LOGIN
 // =======================
 client.login(process.env.TOKEN)
-  .then(() => console.log(`✅ Logged in as ${client.user.tag}`))
+  .then(() => console.log('🚀 Bot login successful'))
   .catch(err => console.error('❌ Login failed:', err));
