@@ -12,12 +12,12 @@ module.exports = {
     const channels = [
       {
         youtubeChannelId: "UCQzpWfAHyxGg1jMfrCIxOdQ",
-        discordChannelId: "1467154654252105870",
+        discordChannelId: "1515615450484969562",
         lastVideo: null,
       },
       {
         youtubeChannelId: "UCiW_QpPfZ8E6tMjptUys3Bg",
-        discordChannelId: "1497533349777117364",
+        discordChannelId: "1515615450484969562",
         lastVideo: null,
       },
     ];
