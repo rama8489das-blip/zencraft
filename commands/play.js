@@ -1,12 +1,15 @@
 const {
     SlashCommandBuilder,
-    EmbedBuilder
+    EmbedBuilder,
+    PermissionsBitField
 } = require('discord.js');
+
+const { useMainPlayer } = require('discord-player');
 
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('play')
-        .setDescription('Play music from YouTube')
+        .setDescription('Play music from YouTube / SoundCloud')
         .addStringOption(option =>
             option
                 .setName('query')
@@ -20,7 +23,7 @@ module.exports = {
 
         if (!voiceChannel) {
             return interaction.reply({
-                content: '❌ Join a voice channel first.',
+                content: '❌ You must join a voice channel first.',
                 ephemeral: true
             });
         }
@@ -28,56 +31,58 @@ module.exports = {
         const permissions = voiceChannel.permissionsFor(interaction.client.user);
 
         if (
-            !permissions.has('Connect') ||
-            !permissions.has('Speak')
+            !permissions?.has(PermissionsBitField.Flags.Connect) ||
+            !permissions?.has(PermissionsBitField.Flags.Speak)
         ) {
             return interaction.reply({
-                content: '❌ I need Connect and Speak permissions.',
+                content: '❌ I need **Connect** and **Speak** permissions in your voice channel.',
                 ephemeral: true
             });
         }
 
-        const query = interaction.options.getString('query');
+        const query = interaction.options.getString('query', true);
 
         await interaction.deferReply();
 
         try {
 
-            const result = await interaction.client.player.play(
-                voiceChannel,
-                query,
-                {
-                    requestedBy: interaction.user,
-                    nodeOptions: {
-                        metadata: interaction.channel,
-                        volume: 75,
-                        leaveOnEmpty: false,
-                        leaveOnEnd: false,
-                        leaveOnStop: false
-                    }
-                }
-            );
+            const player = useMainPlayer();
 
-            if (!result || !result.track) {
+            const result = await player.play(voiceChannel, query, {
+                requestedBy: interaction.user,
+                nodeOptions: {
+                    metadata: interaction.channel,
+                    volume: 75,
+                    leaveOnEmpty: false,
+                    leaveOnEnd: false,
+                    leaveOnStop: false
+                }
+            });
+
+            // discord-player v7 safe track extraction
+            const track =
+                result?.track ||
+                result?.queue?.currentTrack ||
+                result;
+
+            if (!track) {
                 return interaction.editReply({
-                    content: '❌ No results found.'
+                    content: '❌ No results found for your query.'
                 });
             }
 
-            const track = result.track;
-
             const embed = new EmbedBuilder()
                 .setColor('#5865F2')
-                .setTitle('🎵 Added To Queue')
+                .setTitle('🎵 Now Playing')
                 .setDescription(
-                    `**${track.title}**\n\n` +
-                    `👤 Author: ${track.author}\n` +
-                    `⏱️ Duration: ${track.duration}\n` +
+                    `**${track.title || 'Unknown Title'}**\n\n` +
+                    `👤 Author: ${track.author || 'Unknown'}\n` +
+                    `⏱️ Duration: ${track.duration || 'Unknown'}\n` +
                     `🎧 Requested By: ${interaction.user}`
                 )
-                .setThumbnail(track.thumbnail)
+                .setThumbnail(track.thumbnail || null)
                 .setFooter({
-                    text: '🔥 Powered by Zencraft'
+                    text: '🔥 Zencraft Music System'
                 })
                 .setTimestamp();
 
@@ -85,14 +90,14 @@ module.exports = {
                 embeds: [embed]
             });
 
-            console.log(`▶️ Play Request: ${track.title}`);
+            console.log(`▶️ Playing: ${track.title}`);
 
         } catch (error) {
 
-            console.error('PLAY ERROR:', error);
+            console.error('❌ PLAY ERROR:', error);
 
             await interaction.editReply({
-                content: `❌ Failed to play song.\n\`\`\`${error.message}\`\`\``
+                content: `❌ Failed to play song:\n\`\`\`${error.message}\`\`\``
             });
         }
     }
