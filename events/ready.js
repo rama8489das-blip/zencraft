@@ -33,10 +33,10 @@ module.exports = {
 
     try {
 
-      const guild = client.guilds.cache.get("YOUR_GUILD_ID");
+      const guild = client.guilds.cache.get("1467154652960391427");
 
       const voiceChannel =
-        guild?.channels.cache.get("VOICE_CHANNEL_ID");
+        guild?.channels.cache.get("1515618842125275258");
 
       if (voiceChannel) {
 
