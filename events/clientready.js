@@ -1,9 +1,8 @@
 const Parser = require("rss-parser");
 const parser = new Parser();
-const { useMainPlayer } = require("discord-player");
 
 module.exports = {
-  name: "clientReady",
+  name: "ready",
   once: true,
 
   async execute(client) {
@@ -11,30 +10,9 @@ module.exports = {
     console.log(`✅ Logged in as ${client.user.tag}`);
 
     // =======================
-    // 🎵 MUSIC SYSTEM (FIXED)
+    // 🎧 STATUS
     // =======================
-
-    try {
-      useMainPlayer(client);
-      console.log("🎵 Music System Loaded");
-    } catch (err) {
-      console.error("❌ Music system failed:", err);
-    }
-
-    // =======================
-    // 🎧 24/7 VOICE (OPTIONAL - KEEP SIMPLE)
-    // =======================
-
-    try {
-      const guild = client.guilds.cache.get("1467154652960391427");
-      const voiceChannel = guild?.channels.cache.get("1515618842125275258");
-
-      if (voiceChannel) {
-        console.log("🎧 24/7 voice channel detected (no auto join handled here)");
-      }
-    } catch (err) {
-      console.error("❌ Voice setup error:", err);
-    }
+    console.log("🎧 Bot is fully online and ready");
 
     // =======================
     // 📺 YOUTUBE TRACKER
@@ -67,19 +45,20 @@ module.exports = {
 
           const latest = feed.items[0];
 
+          // first run init
           if (!config.lastVideo) {
             config.lastVideo = latest.id;
-            console.log(`📌 Tracking ${config.youtubeChannelId}`);
+            console.log(`📌 Tracking channel: ${config.youtubeChannelId}`);
             continue;
           }
 
+          // new video detected
           if (latest.id !== config.lastVideo) {
 
             config.lastVideo = latest.id;
 
-            const channel = await client.channels.fetch(config.discordChannelId);
-
-            if (!channel) continue;
+            const channel = await client.channels.fetch(config.discordChannelId).catch(() => null);
+            if (!channel) return;
 
             const videoId = latest.id.split(":")[2];
 
@@ -104,12 +83,11 @@ module.exports = {
           }
 
         } catch (err) {
-          console.error(`❌ YouTube error:`, err.message);
+          console.error("❌ YouTube error:", err.message);
         }
 
       }
 
     }, 300000);
-
   }
 };
