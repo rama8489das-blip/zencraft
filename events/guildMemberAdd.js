@@ -2,35 +2,56 @@ const { EmbedBuilder } = require('discord.js');
 
 module.exports = {
   name: 'guildMemberAdd',
+
   async execute(member) {
 
     const channel = member.guild.channels.cache.get(process.env.WELCOME_CHANNEL);
+    if (!channel) return;
 
     const embed = new EmbedBuilder()
-      .setTitle("👋 Welcome to Zencraft SMP!")
       .setColor("#57F287")
 
+      .setTitle("🎮 Zencraft SMP!")
+
       .setDescription(
-        `🎉 Hey ${member}, welcome to **Zencraft SMP**!\n\n` +
+        `👋 Welcome ${member} to **Zencraft SMP**!\n\n` +
 
-        `🌍 One of the **Top Tamil Minecraft Servers 🇮🇳**\n\n` +
+        `🌍 One of the best **Tamil Minecraft Communities 🇮🇳**\n\n` +
 
-        `📜 Read rules: <#1467154654096789750>\n` +
-        `📡 Server IP: <#1467154654096789753>\n\n` +
+        `📖 **Rules**\n` +
+        `➡️ <#1467154654096789752>\n\n` +
 
-        `💬 Enjoy your stay and make amazing memories! 🚀`
+        `📡 **Server IP**\n` +
+        `➡️ <#1515615201498497274>\n\n` +
+
+        `🎟️ Need help? Create a ticket anytime.\n` +
+        `🤝 Meet new players and build your legacy.\n` +
+        `⚔️ Compete, survive, and dominate the SMP.\n` +
+        `🏆 Participate in events and win rewards.\n\n` +
+
+        `🔥 We hope you enjoy your stay and become part of the Zencraft family!`
       )
 
-      // 👤 Avatar (top right)
-      .setThumbnail(member.user.displayAvatarURL({ dynamic: true, size: 512 }))
+      .setThumbnail(
+        member.user.displayAvatarURL({
+          dynamic: true,
+          size: 512
+        })
+      )
 
-      // 🔥 POWERED BY
-      .setFooter({ text: "🔥 Powered by Zencraft" })
+      // Minecraft-themed banner image
+      .setImage(
+        "https://i.imgur.com/j6sM6xS.jpeg"
+      )
+
+      .setFooter({
+        text: `🔥 Powered by Zencraft • Member #${member.guild.memberCount}`
+      })
 
       .setTimestamp();
 
-    channel.send({
-      content: `🎉 Welcome ${member}!`,
+    await channel.send({
+      content: `🎉 Welcome ${member} to the server!`,
       embeds: [embed]
     });
   }
