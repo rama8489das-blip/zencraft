@@ -12,7 +12,8 @@
     "axios": "^1.10.0",
     "rss-parser": "^3.13.0",
     "minecraft-server-util": "^5.4.0",
-    "discord-player": "^7.1.1",
+
+    "discord-player": "7.0.0",
     "@discord-player/extractor": "^7.1.1"
   }
 }
