@@ -14,7 +14,8 @@
     "minecraft-server-util": "^5.4.0",
 
     "@discordjs/voice": "^0.18.0",
-    "discord-player": "^7.4.1",
-    "@discord-player/extractor": "^7.1.0"
+    "discord-player": "latest",
+    "@discord-player/extractor": "latest",
+    "ffmpeg-static": "^5.2.0"
   }
 }
