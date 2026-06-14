@@ -23,35 +23,36 @@ module.exports = {
 
         if (!voiceChannel) {
             return interaction.reply({
-                content: '❌ You must join a voice channel first.',
+                content: '❌ Join a voice channel first.',
                 ephemeral: true
             });
         }
 
-        const permissions = voiceChannel.permissionsFor(interaction.client.user);
+        const botPerms = voiceChannel.permissionsFor(interaction.client.user);
 
         if (
-            !permissions?.has(PermissionsBitField.Flags.Connect) ||
-            !permissions?.has(PermissionsBitField.Flags.Speak)
+            !botPerms?.has(PermissionsBitField.Flags.Connect) ||
+            !botPerms?.has(PermissionsBitField.Flags.Speak)
         ) {
             return interaction.reply({
-                content: '❌ I need **Connect** and **Speak** permissions in your voice channel.',
+                content: '❌ I need Connect + Speak permissions.',
                 ephemeral: true
             });
         }
 
-        const query = interaction.options.getString('query', true);
+        const query = interaction.options.getString('query');
 
         await interaction.deferReply();
 
         try {
-
             const player = useMainPlayer();
 
-            const result = await player.play(voiceChannel, query, {
+            const { track } = await player.play(voiceChannel, query, {
                 requestedBy: interaction.user,
                 nodeOptions: {
-                    metadata: interaction.channel,
+                    metadata: {
+                        channel: interaction.channel
+                    },
                     volume: 75,
                     leaveOnEmpty: false,
                     leaveOnEnd: false,
@@ -59,45 +60,29 @@ module.exports = {
                 }
             });
 
-            // discord-player v7 safe track extraction
-            const track =
-                result?.track ||
-                result?.queue?.currentTrack ||
-                result;
-
-            if (!track) {
-                return interaction.editReply({
-                    content: '❌ No results found for your query.'
-                });
-            }
-
+            // 🔥 SAFE TRACK USAGE
             const embed = new EmbedBuilder()
                 .setColor('#5865F2')
                 .setTitle('🎵 Now Playing')
                 .setDescription(
-                    `**${track.title || 'Unknown Title'}**\n\n` +
-                    `👤 Author: ${track.author || 'Unknown'}\n` +
-                    `⏱️ Duration: ${track.duration || 'Unknown'}\n` +
+                    `**${track.title}**\n\n` +
+                    `👤 Author: ${track.author}\n` +
+                    `⏱️ Duration: ${track.duration}\n` +
                     `🎧 Requested By: ${interaction.user}`
                 )
-                .setThumbnail(track.thumbnail || null)
-                .setFooter({
-                    text: '🔥 Zencraft Music System'
-                })
+                .setThumbnail(track.thumbnail)
+                .setFooter({ text: 'Zencraft Music System' })
                 .setTimestamp();
 
-            await interaction.editReply({
-                embeds: [embed]
-            });
+            await interaction.editReply({ embeds: [embed] });
 
             console.log(`▶️ Playing: ${track.title}`);
 
         } catch (error) {
-
-            console.error('❌ PLAY ERROR:', error);
+            console.error('PLAY ERROR:', error);
 
             await interaction.editReply({
-                content: `❌ Failed to play song:\n\`\`\`${error.message}\`\`\``
+                content: `❌ Error: ${error.message}`
             });
         }
     }
