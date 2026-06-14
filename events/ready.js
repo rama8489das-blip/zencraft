@@ -1,7 +1,6 @@
 const Parser = require("rss-parser");
-const { joinVoiceChannel } = require("@discordjs/voice");
-
 const parser = new Parser();
+const { useMainPlayer } = require("discord-player");
 
 module.exports = {
   name: "clientReady",
@@ -12,50 +11,29 @@ module.exports = {
     console.log(`✅ Logged in as ${client.user.tag}`);
 
     // =======================
-    // 🎵 LOAD MUSIC SYSTEM
+    // 🎵 MUSIC SYSTEM (FIXED)
     // =======================
 
     try {
-
-      await require("../player")(client);
-
+      useMainPlayer(client);
       console.log("🎵 Music System Loaded");
-
     } catch (err) {
-
-      console.error("❌ Failed to load music system:", err);
-
+      console.error("❌ Music system failed:", err);
     }
 
     // =======================
-    // 🎧 24/7 VOICE CHANNEL
+    // 🎧 24/7 VOICE (OPTIONAL - KEEP SIMPLE)
     // =======================
 
     try {
-
       const guild = client.guilds.cache.get("1467154652960391427");
-
-      const voiceChannel =
-        guild?.channels.cache.get("1515618842125275258");
+      const voiceChannel = guild?.channels.cache.get("1515618842125275258");
 
       if (voiceChannel) {
-
-        joinVoiceChannel({
-          channelId: voiceChannel.id,
-          guildId: guild.id,
-          adapterCreator: guild.voiceAdapterCreator,
-          selfDeaf: true,
-          selfMute: false
-        });
-
-        console.log("🎧 Connected to 24/7 Voice Channel");
-
+        console.log("🎧 24/7 voice channel detected (no auto join handled here)");
       }
-
     } catch (err) {
-
-      console.error("❌ Voice Connection Error:", err);
-
+      console.error("❌ Voice setup error:", err);
     }
 
     // =======================
@@ -85,19 +63,13 @@ module.exports = {
             `https://www.youtube.com/feeds/videos.xml?channel_id=${config.youtubeChannelId}`
           );
 
-          if (!feed.items || feed.items.length === 0)
-            continue;
+          if (!feed.items?.length) continue;
 
           const latest = feed.items[0];
 
           if (!config.lastVideo) {
-
             config.lastVideo = latest.id;
-
-            console.log(
-              `📌 Tracking ${config.youtubeChannelId} | Latest: ${latest.title}`
-            );
-
+            console.log(`📌 Tracking ${config.youtubeChannelId}`);
             continue;
           }
 
@@ -105,18 +77,9 @@ module.exports = {
 
             config.lastVideo = latest.id;
 
-            const channel = await client.channels.fetch(
-              config.discordChannelId
-            );
+            const channel = await client.channels.fetch(config.discordChannelId);
 
-            if (!channel) {
-
-              console.log(
-                `❌ Discord channel not found: ${config.discordChannelId}`
-              );
-
-              continue;
-            }
+            if (!channel) continue;
 
             const videoId = latest.id.split(":")[2];
 
@@ -125,34 +88,23 @@ module.exports = {
               embeds: [
                 {
                   title: "📺 New Video Uploaded!",
-                  description:
-                    `🎬 **${latest.title}**\n\n` +
-                    `👉 [Watch Now](${latest.link})`,
+                  description: `🎬 **${latest.title}**\n\n👉 [Watch Now](${latest.link})`,
                   color: 0xff0000,
                   url: latest.link,
                   image: {
                     url: `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`
                   },
-                  footer: {
-                    text: "🔥 Powered by Zencraft"
-                  },
+                  footer: { text: "🔥 Powered by Zencraft" },
                   timestamp: new Date().toISOString()
                 }
               ]
             });
 
-            console.log(
-              `✅ Notification sent for ${config.youtubeChannelId}`
-            );
+            console.log(`✅ Sent alert: ${latest.title}`);
           }
 
         } catch (err) {
-
-          console.error(
-            `❌ Error checking ${config.youtubeChannelId}:`,
-            err.message
-          );
-
+          console.error(`❌ YouTube error:`, err.message);
         }
 
       }
