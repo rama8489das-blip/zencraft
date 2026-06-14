@@ -1,10 +1,16 @@
 const { Player } = require('discord-player');
+const { DefaultExtractors } = require('@discord-player/extractor');
 
 module.exports = async (client) => {
 
     const player = new Player(client);
 
-    await player.extractors.loadDefault();
+    // New discord-player syntax
+    await player.extractors.loadMulti(DefaultExtractors);
+
+    client.player = player;
+
+    console.log('🎵 Music Player Loaded');
 
     player.events.on('playerStart', (queue, track) => {
         queue.metadata?.send({
@@ -30,7 +36,4 @@ module.exports = async (client) => {
         console.error(error);
     });
 
-    client.player = player;
-
-    console.log('🎵 Music Player Loaded');
 };
